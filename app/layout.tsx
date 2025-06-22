@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { GeistSans, GeistMono } from 'geist/font'
+import { GeistSans } from 'geist/font/sans';
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
 

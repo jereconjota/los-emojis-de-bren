@@ -1,4 +1,3 @@
-
 "use client"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
@@ -21,6 +20,7 @@ export default function EmojiSpinner() {
   const [emailInput, setEmailInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
+  const [isNewSelection, setIsNewSelection] = useState(false)
   const { toast } = useToast()
 
   // Load existing session on component mount
@@ -28,7 +28,7 @@ export default function EmojiSpinner() {
     const loadExistingSession = async () => {
       try {
         const storedEmail = localStorage.getItem('emoji-game-email')
-        
+
         if (storedEmail) {
           // Check if session still exists in database
           const { data: existingSession, error } = await supabase
@@ -46,6 +46,7 @@ export default function EmojiSpinner() {
               title: "¡Sesión restaurada!",
               description: `Bienvenido de nuevo, ${storedEmail}`,
               className: "bg-green-100 text-green-700 border-green-200",
+              duration: 1500,
             })
           } else {
             // Session doesn't exist in database, clear localStorage and show dialog
@@ -175,8 +176,12 @@ export default function EmojiSpinner() {
       setSelectedIndex(selectedSegment)
       const selectedEmoji = emojisOnWheel[selectedSegment].emoji
 
+      // Check if this is a new selection BEFORE updating state
+      const isNew = !selectedEmojis.includes(selectedEmoji)
+      setIsNewSelection(isNew)
+
       // Only add to history if not already selected
-      if (!selectedEmojis.includes(selectedEmoji)) {
+      if (isNew) {
         const newSelectedEmojis = [...selectedEmojis, selectedEmoji]
         setSelectedEmojis(newSelectedEmojis)
         saveSession(newSelectedEmojis) // Save to database
@@ -215,7 +220,7 @@ export default function EmojiSpinner() {
   // Show loading screen during initialization
   if (isInitializing) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-pink-100 via-pink-100 to-blue-100">
+      <div className="flex flex-col items-center justify-center min-h-dvh p-4 bg-gradient-to-br from-pink-100 via-pink-100 to-blue-100">
         <h1 className="mb-8 text-4xl font-bold text-pink-500">Los Emojis de Bren</h1>
         <div className="flex items-center space-x-2">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
@@ -298,7 +303,7 @@ export default function EmojiSpinner() {
                     textAnchor="middle"
                     dominantBaseline="middle"
                     className="text-2xl"
-                    style={{ fontSize: ".5rem" }}
+                    style={{ fontSize: ".45rem" }}
                   >
                     {segment.emoji}
                   </text>
@@ -309,7 +314,7 @@ export default function EmojiSpinner() {
 
           {/* Center hub */}
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-gradient-to-br from-yellow-200 to-orange-200 rounded-full shadow-lg flex items-center justify-center border-4 border-white z-10">
-            <Button className="bg-transparent border-none rounded-full" onClick={spinWheel}>
+            <Button className="bg-transparent border-none rounded-full hover:bg-transparent" onClick={spinWheel}>
               <span className="text-2xl">🎯</span>
             </Button>
           </div>
@@ -317,41 +322,43 @@ export default function EmojiSpinner() {
       </div>
 
       {/* History display */}
-      <div className="w-full max-w-2xl">
-        <h2 className="mb-4 md:text-2xl text-xl font-semibold text-pink-600 text-center">Hasta ahora ya elegiste</h2>
-        <div className="">
+      {selectedEmojis.length < emojisOnWheel.length && (
+        <div className="w-full max-w-2xl">
           {selectedEmojis.length > 0 ? (
-            <div className="flex flex-wrap gap-3 justify-center">
-              {selectedEmojis.map((emoji, index) => (
-                <motion.div
-                  key={`history-${index}`}
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center justify-center w-10 h-10 text-xl md:w-14 md:h-14 md:text-3xl bg-gradient-to-br from-pink-100 to-pink-100 rounded-full shadow-md border-2 border-pink-200"
-                >
-                  {emoji}
-                </motion.div>
-              ))}
+            <div>
+              <h2 className="mb-4 md:text-2xl text-xl font-semibold text-pink-600 text-center">Hasta ahora ya elegiste</h2>
+              <div className="flex md:flex-wrap gap-3 md:justify-center overflow-x-auto pb-2 md:pb-0">
+                {selectedEmojis.map((emoji, index) => (
+                  <motion.div
+                    key={`history-${index}`}
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center justify-center w-10 h-10 text-xl md:w-14 md:h-14 md:text-3xl bg-gradient-to-br from-pink-100 to-pink-100 rounded-full shadow-md border-2 border-pink-200 flex-shrink-0"
+                  >
+                    {emoji}
+                  </motion.div>
+                ))}
+              </div>
             </div>
           ) : (
-            <p className="text-gray-400 italic text-center text-lg">No emojis selected yet - spin the wheel!</p>
+            <p className="text-gray-400 italic text-center md:text-md text-xs">Todavía no has elegido ningún emoji</p>
           )}
-        </div>
 
-        {/* Progress indicator */}
-        <div className="mt-4 text-center">
-          <p className="text-pink-500 text-xs md:text-sm">
-            Emojis: {selectedEmojis.length} / {emojisOnWheel.length}
-          </p>
-          <div className="w-full bg-pink-100 rounded-full md:h-3 h-2 md:mt-2 mt-1">
-            <div
-              className="bg-gradient-to-r from-pink-400 to-pink-400 md:h-3 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${(selectedEmojis.length / emojisOnWheel.length) * 100}%` }}
-            ></div>
+          {/* Progress indicator */}
+          <div className="mt-4 text-center">
+            <p className="text-pink-500 text-xs md:text-sm">
+              Emojis: {selectedEmojis.length} / {emojisOnWheel.length}
+            </p>
+            <div className="w-full bg-pink-100 rounded-full md:h-3 h-2 md:mt-2 mt-1">
+              <div
+                className="bg-gradient-to-r from-pink-400 to-pink-400 md:h-3 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${(selectedEmojis.length / emojisOnWheel.length) * 100}%` }}
+              ></div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {selectedEmojis.length === emojisOnWheel.length && (
         <motion.div
@@ -359,9 +366,13 @@ export default function EmojiSpinner() {
           animate={{ scale: 1 }}
           className="mt-6 p-4 bg-gradient-to-r from-pink-200 to-pink-200 rounded-lg shadow-lg"
         >
-          <p className="text-center text-xl font-bold text-pink-700">
-            🎉 Congratulations! You've selected all emojis! 🎉
+          <p className="text-center text-xl font-bold text-pink-600">
+            🎉 ¡Felicidades! ¡Elegiste todos los emojis! 🎉
           </p>
+          <p className="text-center text-xl font-bold text-pink-600">
+            ❤️ Que disfrutes tus regalitos ❤️
+          </p>
+
         </motion.div>
       )}
 
@@ -380,7 +391,7 @@ export default function EmojiSpinner() {
             <div className="space-y-2">
               <Input
                 type="email"
-                placeholder="your.email@example.com"
+                placeholder="email@example.com"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleEmailSubmit()}
@@ -420,19 +431,19 @@ export default function EmojiSpinner() {
 
             {/* Selection text */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <h2 className="text-2xl font-bold text-pink-600 mb-2">¡Elegido!</h2>
+              <DialogTitle className="text-2xl font-bold text-pink-600 mb-2">¡Elegido!</DialogTitle>
               <p className="text-sm text-gray-600 mb-4">
-                {selectedIndex !== null && !selectedEmojis.includes(emojisOnWheel[selectedIndex].emoji)
-                  ? "New emoji added to your collection!"
-                  : "You've already collected this one!"}
+                {isNewSelection
+                  ? "Nuevo emoji agregado a tu colección! Busca el regalo que tenga este emoji!"
+                  : "Ya elegiste este emoji!"}
               </p>
 
               {/* Close button */}
               <Button
                 onClick={() => setShowModal(false)}
-                className="bg-pink-400 hover:bg-pink-500 text-white px-6 py-2 text-sm rounded-full"
+                className="bg-pink-500 hover:bg-pink-400 text-white px-6 py-2 text-sm rounded-full"
               >
-                Continue
+                Continuar
               </Button>
             </motion.div>
           </motion.div>
