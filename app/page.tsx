@@ -1,6 +1,6 @@
 
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,11 +16,56 @@ export default function EmojiSpinner() {
   const [rotation, setRotation] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [showEmailDialog, setShowEmailDialog] = useState(true)
+  const [showEmailDialog, setShowEmailDialog] = useState(false)
   const [email, setEmail] = useState("")
   const [emailInput, setEmailInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
   const { toast } = useToast()
+
+  // Load existing session on component mount
+  useEffect(() => {
+    const loadExistingSession = async () => {
+      try {
+        const storedEmail = localStorage.getItem('emoji-game-email')
+        
+        if (storedEmail) {
+          // Check if session still exists in database
+          const { data: existingSession, error } = await supabase
+            .from("game_sessions")
+            .select("*")
+            .eq("email", storedEmail)
+            .single()
+
+          if (existingSession && !error) {
+            // Load existing session
+            setEmail(storedEmail)
+            setSelectedEmojis(existingSession.selected_emojis || [])
+            setShowEmailDialog(false)
+            toast({
+              title: "¡Sesión restaurada!",
+              description: `Bienvenido de nuevo, ${storedEmail}`,
+              className: "bg-green-100 text-green-700 border-green-200",
+            })
+          } else {
+            // Session doesn't exist in database, clear localStorage and show dialog
+            localStorage.removeItem('emoji-game-email')
+            setShowEmailDialog(true)
+          }
+        } else {
+          // No stored email, show dialog
+          setShowEmailDialog(true)
+        }
+      } catch (error) {
+        console.error("Error loading session:", error)
+        setShowEmailDialog(true)
+      } finally {
+        setIsInitializing(false)
+      }
+    }
+
+    loadExistingSession()
+  }, [toast])
 
   // Load or create session based on email
   const handleEmailSubmit = async () => {
@@ -75,7 +120,9 @@ export default function EmojiSpinner() {
         })
       }
 
-      setEmail(emailInput.trim().toLowerCase())
+      const finalEmail = emailInput.trim().toLowerCase()
+      setEmail(finalEmail)
+      localStorage.setItem('emoji-game-email', finalEmail)
       setShowEmailDialog(false)
     } catch (error) {
       console.error("Unexpected error:", error)
@@ -153,6 +200,7 @@ export default function EmojiSpinner() {
   }
 
   const changeUser = () => {
+    localStorage.removeItem('emoji-game-email')
     setShowEmailDialog(true)
     setEmail("")
     setEmailInput("")
@@ -163,6 +211,19 @@ export default function EmojiSpinner() {
   }
 
   const segmentAngle = 360 / emojisOnWheel.length
+
+  // Show loading screen during initialization
+  if (isInitializing) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-pink-100 via-pink-100 to-blue-100">
+        <h1 className="mb-8 text-4xl font-bold text-pink-500">Los Emojis de Bren</h1>
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
+          <span className="text-pink-500">Cargando tu sesión...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-pink-100 via-pink-100 to-blue-100">
@@ -305,7 +366,7 @@ export default function EmojiSpinner() {
       )}
 
       {/* Email input dialog */}
-      <Dialog open={showEmailDialog} onOpenChange={() => { }}>
+      <Dialog open={showEmailDialog && !isInitializing} onOpenChange={() => { }}>
         <DialogContent className="max-w-xs md:max-w-md bg-white border border-pink-100 shadow-lg rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-pink-600 text-center">
