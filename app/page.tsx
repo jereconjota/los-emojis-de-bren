@@ -97,8 +97,9 @@ export default function EmojiSpinner() {
         setSelectedEmojis(existingSession.selected_emojis || [])
         toast({
           title: "¡Bienvenido de nuevo!",
-          description: `Elegiste ${existingSession.selected_emojis?.length || 0} emojis.`,
+          description: `Ya te tocaron ${existingSession.selected_emojis?.length || 0} emojis.`,
           className: "bg-green-100 text-green-700 border-green-200",
+          duration: 1500,
         })
       } else {
         // Create new session
@@ -118,6 +119,7 @@ export default function EmojiSpinner() {
           title: "New game session created!",
           description: "Ready to start spinning the wheel!",
           className: "bg-blue-100 text-blue-700 border-blue-200",
+          duration: 1500,
         })
       }
 
@@ -154,27 +156,70 @@ export default function EmojiSpinner() {
     }
   }
 
+  // Calculate weighted selection based on game progress
+  const getWeightedEmojiIndex = () => {
+    const progressRatio = selectedEmojis.length / emojisOnWheel.length
+    
+    // Calculate weights for each emoji
+    const weights = emojisOnWheel.map((emojiData, index) => {
+      const isSelected = selectedEmojis.includes(emojiData.emoji)
+      
+      if (isSelected) {
+        return 1 // Base weight for already selected emojis
+      } else {
+        // Increase weight for unselected emojis based on progress
+        // Early game: weight = 1
+        // Mid game (50%): weight = 3
+        // Late game (75%): weight = 6  
+        // Very late game (90%): weight = 10
+        const baseWeight = 1
+        const bonusWeight = Math.floor(progressRatio * progressRatio * 12) // Exponential increase
+        return baseWeight + bonusWeight
+      }
+    })
+    
+    // Calculate total weight
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
+    
+    // Generate random number between 0 and totalWeight
+    let random = Math.random() * totalWeight
+    
+    // Find which segment this random number falls into
+    for (let i = 0; i < weights.length; i++) {
+      random -= weights[i]
+      if (random <= 0) {
+        return i
+      }
+    }
+    
+    // Fallback (shouldn't happen)
+    return Math.floor(Math.random() * emojisOnWheel.length)
+  }
+
   const spinWheel = () => {
     if (isSpinning) return
 
     setIsSpinning(true)
     setSelectedIndex(null)
 
-    // Calculate random rotation (multiple full rotations + random position)
-    const spins = 5 + Math.random() * 5 // 5-10 full rotations
-    const finalPosition = Math.random() * 360
+    // Get weighted emoji selection
+    const targetSegment = getWeightedEmojiIndex()
+    
+    // Calculate the angle for the target segment
+    const segmentAngle = 360 / emojisOnWheel.length
+    const targetAngle = targetSegment * segmentAngle + (segmentAngle / 2) // Center of segment
+    
+    // Calculate rotation needed to land on target (accounting for pointer at top)
+    const spins = 5 + Math.random() * 3 // 5-8 full rotations for drama
+    const pointerOffset = 90 // Pointer is at top (90 degrees)
+    const finalPosition = (360 - targetAngle + pointerOffset) % 360
     const totalRotation = rotation + spins * 360 + finalPosition
 
     setRotation(totalRotation)
 
-    // Calculate which segment the pointer lands on
-    const segmentAngle = 360 / emojisOnWheel.length
-    const normalizedAngle = (360 - (finalPosition % 360)) % 360
-    const selectedSegment = Math.floor(normalizedAngle / segmentAngle)
-
     setTimeout(() => {
-      setSelectedIndex(selectedSegment)
-      const selectedEmoji = emojisOnWheel[selectedSegment].emoji
+      setSelectedIndex(targetSegment)
+      const selectedEmoji = emojisOnWheel[targetSegment].emoji
 
       // Check if this is a new selection BEFORE updating state
       const isNew = !selectedEmojis.includes(selectedEmoji)
@@ -342,7 +387,7 @@ export default function EmojiSpinner() {
               </div>
             </div>
           ) : (
-            <p className="text-gray-400 italic text-center md:text-md text-xs">Todavía no has elegido ningún emoji</p>
+            <p className="text-gray-400 italic text-center md:text-md text-xs">Todavía no te tocó ningún emoji</p>
           )}
 
           {/* Progress indicator */}
@@ -378,7 +423,7 @@ export default function EmojiSpinner() {
 
       {/* Email input dialog */}
       <Dialog open={showEmailDialog && !isInitializing} onOpenChange={() => { }}>
-        <DialogContent className="max-w-xs md:max-w-md bg-white border border-pink-100 shadow-lg rounded-xl">
+        <DialogContent className="bg-white border border-pink-100 shadow-lg md:rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-pink-600 text-center">
               Hola!
@@ -411,7 +456,7 @@ export default function EmojiSpinner() {
 
       {/* Selection result modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-xs md:max-w-md bg-white/95 backdrop-blur-sm border border-pink-100 shadow-lg p-8 rounded-xl">
+        <DialogContent className="bg-white/95 backdrop-blur-sm border border-pink-100 shadow-lg p-8 md:rounded-xl">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
