@@ -265,7 +265,7 @@ export default function EmojiSpinner() {
   // Show loading screen during initialization
   if (isInitializing) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-dvh p-4 bg-gradient-to-br from-pink-100 via-pink-100 to-blue-100">
+      <div className="flex flex-col items-center justify-center h-dvh p-4 bg-gradient-to-br from-pink-100 via-pink-100 to-blue-100">
         <h1 className="mb-8 text-4xl font-bold text-pink-500">Los Emojis de Bren</h1>
         <div className="flex items-center space-x-2">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-500"></div>
@@ -276,7 +276,7 @@ export default function EmojiSpinner() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-pink-100 via-pink-100 to-blue-100">
+    <div className="flex flex-col items-center justify-center h-dvh p-4 bg-gradient-to-br from-pink-100 via-pink-100 to-blue-100">
       <h1 className="md:mb-4 mb-2 text-4xl font-bold text-pink-500">Los Emojis de Bren</h1>
 
       {/* User info and change user button */}
