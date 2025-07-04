@@ -3,7 +3,6 @@ export const emojisOnWheel = [
   { emoji: "👾", color: "bg-purple-200" },
   { emoji: "😈", color: "bg-blue-200" },
   { emoji: "🐶", color: "bg-green-200" },
-  { emoji: "🐸", color: "bg-yellow-200" },
   { emoji: "🐰", color: "bg-orange-200" },
   { emoji: "🐛", color: "bg-rose-200" },
   { emoji: "🦄", color: "bg-indigo-200" },
